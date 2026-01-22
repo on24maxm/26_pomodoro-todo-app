@@ -22,3 +22,31 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build output
+release/
+.icon-icns
+
+# Environment variables
+.env
+.env.*
+
+# Testing
+coverage/
+
+# Misc
+.eslintcache
+
+# Build output
+release/
+.icon-icns
+
+# Environment variables
+.env
+.env.*
+
+# Testing
+coverage/
+
+# Misc
+.eslintcache

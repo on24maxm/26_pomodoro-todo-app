@@ -8,6 +8,34 @@ import { useTodoStore } from './stores/todoStore'
 
 const store = useTodoStore()
 const showSettings = ref(false)
+
+// Notification Logic for Due Todos
+setInterval(() => {
+    if (Notification.permission !== 'granted') return
+
+    const now = new Date()
+    const currentDateTimeStr = now.toISOString().slice(0, 16) // YYYY-MM-DDTHH:mm
+
+    store.todos.forEach(todo => {
+        if (!todo.completed && todo.dueDate && todo.dueTime) {
+            const todoDateTimeStr = `${todo.dueDate}T${todo.dueTime}`
+            // Check if due time matches current minute (simple check to avoid spam, assuming interval runs every minute approx)
+            // Better: Check if within last minute to catch slightly delayed checks
+            // For simplicity and robustness in this demo: exact match of HH:mm string
+             if (todoDateTimeStr === currentDateTimeStr) {
+                new Notification('Aufgabe fällig!', {
+                    body: `"${todo.text}" ist jetzt fällig.`,
+                    icon: '/favicon.ico'
+                })
+             }
+        }
+    })
+}, 60000) // Check every minute
+
+// Request permission on mount
+if (Notification.permission === 'default') {
+    Notification.requestPermission()
+}
 </script>
 
 <template>
@@ -15,7 +43,12 @@ const showSettings = ref(false)
     <header class="app-header">
       <div class="header-left">
         <h1 class="logo">Pomodo.</h1>
-        <span class="daily-count">Heute: {{ store.dailyStats.count }} 🍅</span>
+        <span class="daily-count">
+            Heute: {{ store.dailyStats.count }} 🍅
+            <span v-if="store.dailyStats.totalTime > 0" class="daily-time">
+                ({{ Math.floor(store.dailyStats.totalTime / 60) }}h {{ store.dailyStats.totalTime % 60 }}m)
+            </span>
+        </span>
       </div>
       <button @click="showSettings = true" class="settings-btn" title="Settings">
         Einstellungen
@@ -70,6 +103,11 @@ const showSettings = ref(false)
 .daily-count {
   font-size: 0.875rem;
   color: var(--color-text-muted);
+}
+
+.daily-time {
+    margin-left: 4px;
+    font-weight: 500;
 }
 
 .settings-btn {

@@ -43,6 +43,11 @@ const toggleTimer = () => {
 const startTimer = () => {
   if (timeLeft.value === 0) return
   isRunning.value = true
+  
+  if (Notification.permission === 'default') {
+    Notification.requestPermission()
+  }
+
   playStartSound()
   intervalId = setInterval(() => {
     if (timeLeft.value > 0) {
@@ -57,6 +62,14 @@ const startTimer = () => {
         playCompleteSound()
       } catch (e) {
         console.error('Error playing complete sound:', e)
+      }
+      
+      // Notification
+      if (Notification.permission === 'granted') {
+        new Notification('Timer abgelaufen!', {
+          body: mode.value === 'work' ? 'Fokuszeit beendet. Mach eine Pause!' : 'Pause beendet. Zurück an die Arbeit!',
+          icon: '/favicon.ico' // Check if favicon exists or omit
+        })
       }
       
       if (mode.value === 'work') {

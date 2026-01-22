@@ -102,6 +102,26 @@ const openImage = (image) => {
 const closeImage = () => {
   selectedImage.value = null
 }
+
+// Edit Mode Logic
+const isEditing = ref(false)
+const editData = ref({})
+
+const startEdit = () => {
+    editData.value = JSON.parse(JSON.stringify(props.todo))
+    // Ensure repeat exists
+    if (!editData.value.repeat) editData.value.repeat = 'None'
+    isEditing.value = true
+}
+
+const cancelEdit = () => {
+    isEditing.value = false
+}
+
+const saveEdit = () => {
+    store.updateTodo(props.todo.id, editData.value)
+    isEditing.value = false
+}
 </script>
 
 <template>
@@ -109,80 +129,130 @@ const closeImage = () => {
     class="todo-item card"
     :class="{ 'completed': todo.completed, 'active-focus': store.activeTodoId === todo.id }"
   >
-    <div class="todo-main-row">
-      <div class="todo-left">
-        <button 
-          @click="store.toggleTodo(todo.id)" 
-          class="check-btn"
-          :aria-label="todo.completed ? 'Mark update incomplete' : 'Mark as complete'"
-        >
-          <span v-if="todo.completed">✓</span>
-        </button>
-        
-        <div class="todo-content">
-          <span class="todo-text">{{ todo.text }}</span>
-          <div class="todo-meta">
-            <span class="category-tag">{{ todo.category }}</span>
-            <span 
-              class="priority-dot" 
-              :style="{ backgroundColor: priorityColor(todo.priority) }"
-              :title="todo.priority + ' Priority'"
-            ></span>
-            <span 
-              v-if="todo.pomodoros > 0 || todo.estimatedPomodoros > 1" 
-              class="pomodoro-badge" 
-              title="Pomodoros: Erledigt / Geschätzt"
-            >
-              🍅 {{ todo.pomodoros }}/{{ todo.estimatedPomodoros }}
-            </span>
-            <span 
-              v-if="formatDateTime(todo.dueDate, todo.dueTime)" 
-              class="due-date-badge"
-              :class="{ 
-                'is-past': formatDateTime(todo.dueDate, todo.dueTime).isPast && !todo.completed,
-                'is-today': formatDateTime(todo.dueDate, todo.dueTime).isToday 
-              }"
-            >
-              📅 {{ formatDateTime(todo.dueDate, todo.dueTime).text }}
-            </span>
-             <span v-if="todo.subtasks && todo.subtasks.length > 0" class="subtask-badge">
-              📎 {{ todo.subtasks.filter(s => s.completed).length }}/{{ todo.subtasks.length }}
-            </span>
-          </div>
+      <div class="todo-main-row">
+        <!-- Edit Mode -->
+        <div v-if="isEditing" class="edit-mode-container">
+            <input v-model="editData.text" class="edit-input-text" placeholder="Aufgabe..." @keyup.enter="saveEdit" />
+            
+            <div class="edit-options">
+                <select v-model="editData.category" class="edit-select">
+                     <option v-for="cat in store.categories" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+                
+                <select v-model="editData.priority" class="edit-select">
+                    <option value="Low">Niedrig</option>
+                    <option value="Medium">Mittel</option>
+                    <option value="High">Hoch</option>
+                </select>
+
+                 <select v-model="editData.repeat" class="edit-select">
+                    <option value="None">Keine Wiederholung</option>
+                    <option value="Daily">Täglich</option>
+                    <option value="Weekly">Wöchentlich</option>
+                    <option value="Monthly">Monatlich</option>
+                </select>
+                
+                <div class="edit-estimate">
+                    <span>🍅</span>
+                    <input v-model.number="editData.estimatedPomodoros" type="number" min="1" max="50" class="edit-input-number" />
+                </div>
+
+                <div class="edit-date">
+                     <input v-model="editData.dueDate" type="date" class="edit-input-date" />
+                     <input v-model="editData.dueTime" type="time" class="edit-input-time" />
+                </div>
+            </div>
+
+            <div class="edit-actions">
+                <button @click="saveEdit" class="save-btn">Speichern</button>
+                <button @click="cancelEdit" class="cancel-btn">Abbrechen</button>
+            </div>
         </div>
-      </div>
 
-      <div class="todo-actions">
-        <!-- Expand Button -->
-         <button 
-          @click="toggleExpand" 
-          class="icon-btn expand-btn"
-          :class="{ 'is-expanded': isExpanded }"
-          aria-label="Toggle details"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </button>
+        <!-- View Mode -->
+        <div v-else class="view-mode-container">
+             <div class="todo-left">
+                <button 
+                @click="store.toggleTodo(todo.id)" 
+                class="check-btn"
+                :aria-label="todo.completed ? 'Mark update incomplete' : 'Mark as complete'"
+                >
+                <span v-if="todo.completed">✓</span>
+                </button>
+                
+                <div class="todo-content">
+                <span class="todo-text">{{ todo.text }}</span>
+                <div class="todo-meta">
+                    <span class="category-tag">{{ todo.category }}</span>
+                    <span 
+                    class="priority-dot" 
+                    :style="{ backgroundColor: priorityColor(todo.priority) }"
+                    :title="todo.priority + ' Priority'"
+                    ></span>
+                    <span 
+                    v-if="todo.pomodoros > 0 || todo.estimatedPomodoros > 1" 
+                    class="pomodoro-badge" 
+                    title="Pomodoros: Erledigt / Geschätzt"
+                    >
+                    🍅 {{ todo.pomodoros }}/{{ todo.estimatedPomodoros }}
+                    </span>
+                    <span 
+                    v-if="formatDateTime(todo.dueDate, todo.dueTime)" 
+                    class="due-date-badge"
+                    :class="{ 
+                        'is-past': formatDateTime(todo.dueDate, todo.dueTime).isPast && !todo.completed,
+                        'is-today': formatDateTime(todo.dueDate, todo.dueTime).isToday 
+                    }"
+                    >
+                    📅 {{ formatDateTime(todo.dueDate, todo.dueTime).text }}
+                    </span>
+                     <span v-if="todo.subtasks && todo.subtasks.length > 0" class="subtask-badge">
+                    📎 {{ todo.subtasks.filter(s => s.completed).length }}/{{ todo.subtasks.length }}
+                    </span>
+                    <span v-if="todo.repeat && todo.repeat !== 'None'" class="repeat-badge" :title="'Wiederholung: ' + todo.repeat">
+                        🔄 {{ todo.repeat }}
+                    </span>
+                </div>
+                </div>
+            </div>
 
-        <button 
-          v-if="!todo.completed"
-          @click="store.setFocusTodo(todo.id)"
-          class="focus-btn"
-          :class="{ 'is-focused': store.activeTodoId === todo.id }"
-          title="Aufgabe fokussieren"
-        >
-          {{ store.activeTodoId === todo.id ? 'Fokussiert' : 'Fokus' }}
-        </button>
-        
-        <button 
-          @click="store.deleteTodo(todo.id)" 
-          class="icon-btn delete-btn"
-          title="Aufgabe löschen"
-        >
-          ×
-        </button>
-      </div>
+            <div class="todo-actions">
+                 <!-- Edit Button -->
+                <button @click="startEdit" class="icon-btn edit-btn" title="Bearbeiten">
+                    ✏️
+                </button>
+
+                <!-- Expand Button -->
+                <button 
+                @click="toggleExpand" 
+                class="icon-btn expand-btn"
+                :class="{ 'is-expanded': isExpanded }"
+                aria-label="Toggle details"
+                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+                </button>
+
+                <button 
+                v-if="!todo.completed"
+                @click="store.setFocusTodo(todo.id)"
+                class="focus-btn"
+                :class="{ 'is-focused': store.activeTodoId === todo.id }"
+                title="Aufgabe fokussieren"
+                >
+                {{ store.activeTodoId === todo.id ? 'Fokussiert' : 'Fokus' }}
+                </button>
+                
+                <button 
+                @click="store.deleteTodo(todo.id)" 
+                class="icon-btn delete-btn"
+                title="Aufgabe löschen"
+                >
+                ×
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Expanded Details Section -->
@@ -288,8 +358,7 @@ const closeImage = () => {
 .todo-main-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-md);
+  justify-content: space-between; /* This might need to change for edit mode centering? */
   width: 100%;
 }
 
@@ -400,6 +469,14 @@ const closeImage = () => {
   color: #cc3333;
 }
 
+.repeat-badge {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    background: #eef2f5;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
 .todo-actions {
   display: flex;
   align-items: center;
@@ -413,6 +490,70 @@ const closeImage = () => {
 .todo-item:focus-within .todo-actions { /* Show actions when typing in notes */
   opacity: 1;
 }
+
+/* Edit Mode Styles */
+.edit-mode-container {
+    width: 100%;
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.view-mode-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md);
+    width: 100%;
+}
+
+.edit-input-text {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.edit-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.edit-select, .edit-input-number, .edit-input-date, .edit-input-time {
+    padding: 4px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.save-btn {
+    background-color: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.cancel-btn {
+    background-color: transparent;
+    border: 1px solid var(--color-border);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
 
 .icon-btn {
   background: transparent;

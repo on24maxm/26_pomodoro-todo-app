@@ -10,12 +10,34 @@
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5190 && electron .\"",
     "electron:build": "vite build && electron .",
-    "electron:dist": "vite build && electron-builder"
+    "electron:dist": "vite build && electron-builder --mac --win"
   },
   "build": {
     "appId": "com.pomodoro.todo",
+    "productName": "Pomodoro Todo App",
     "mac": {
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "icon": "public/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     },
     "files": [
       "dist/**/*",

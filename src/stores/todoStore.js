@@ -14,7 +14,8 @@ export const useTodoStore = defineStore('todo', () => {
     // Daily Statistics (resets each day)
     const dailyStats = ref({
         date: new Date().toLocaleDateString(),
-        count: 0
+        count: 0,
+        totalTime: 0
     })
 
     // Pomodoro Cycle Tracking
@@ -202,14 +203,59 @@ export const useTodoStore = defineStore('todo', () => {
             subtasks: [],
             pomodoros: 0,
             images: [],
+            repeat: todo.repeat || 'None',
             createdAt: new Date()
         })
+    }
+
+    function updateTodo(id, updates) {
+        const todo = todos.value.find(t => t.id === id)
+        if (todo) {
+            Object.assign(todo, updates)
+        }
     }
 
     function toggleTodo(id) {
         const todo = todos.value.find(t => t.id === id)
         if (todo) {
+            const wasCompleted = todo.completed
             todo.completed = !todo.completed
+
+            // Handle Repeating Todos (only when marking as completed)
+            if (!wasCompleted && todo.completed && todo.repeat && todo.repeat !== 'None') {
+                const nextDate = new Date()
+                // If it has a due date, repeat based on that, otherwise based on today
+                const baseDate = todo.dueDate ? new Date(todo.dueDate) : new Date()
+
+                // Prevent past dates loop if user completes old todo: always project from Today if overdue?
+                // Actually safer to project from "max(dueDate, today)" or just base logic.
+                // Let's stick to simple logic: modify baseDate.
+
+                switch (todo.repeat) {
+                    case 'Daily':
+                        baseDate.setDate(baseDate.getDate() + 1)
+                        break
+                    case 'Weekly':
+                        baseDate.setDate(baseDate.getDate() + 7)
+                        break
+                    case 'Monthly':
+                        baseDate.setMonth(baseDate.getMonth() + 1)
+                        break
+                }
+
+                const nextDueDateStr = baseDate.toISOString().split('T')[0]
+
+                // Create the next occurrence
+                todos.value.push({
+                    ...JSON.parse(JSON.stringify(todo)), // Deep copy properties
+                    id: Date.now().toString(),
+                    completed: false,
+                    pomodoros: 0,
+                    dueDate: nextDueDateStr,
+                    createdAt: new Date(),
+                    // Keep original repeat setting
+                })
+            }
 
             // Auto-queue logic
             if (todo.completed && activeTodoId.value === id) {
@@ -265,13 +311,15 @@ export const useTodoStore = defineStore('todo', () => {
     function checkDailyReset() {
         const today = new Date().toLocaleDateString()
         if (dailyStats.value.date !== today) {
-            dailyStats.value = { date: today, count: 0 }
+            dailyStats.value = { date: today, count: 0, totalTime: 0 }
         }
     }
 
     function completePomodoro() {
         checkDailyReset()
         dailyStats.value.count++
+        // Add work duration to total time (defaulting to 0 if undefined for safety, though it should be set)
+        dailyStats.value.totalTime = (dailyStats.value.totalTime || 0) + timerSettings.value.work
         pomodorosSinceLongBreak.value++
 
         // Increment pomodoro count for active todo
@@ -364,6 +412,7 @@ export const useTodoStore = defineStore('todo', () => {
         todosByPriority,
         sortedTodos,
         addTodo,
+        updateTodo,
         toggleTodo,
         deleteTodo,
         setFocusTodo,

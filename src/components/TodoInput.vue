@@ -7,6 +7,7 @@ const store = useTodoStore()
 const text = ref('')
 const category = ref(store.categories[0])
 const priority = ref('Medium')
+const repeat = ref('None')
 const estimatedPomodoros = ref(1)
 const dueDate = ref('')
 const dueTime = ref('')
@@ -18,6 +19,7 @@ const handleSubmit = () => {
     text: text.value,
     category: category.value,
     priority: priority.value,
+    repeat: repeat.value,
     estimatedPomodoros: estimatedPomodoros.value,
     dueDate: dueDate.value || null,
     dueTime: dueTime.value || null
@@ -28,6 +30,7 @@ const handleSubmit = () => {
   dueTime.value = ''
   // Keep category/priority for rapid entry or reset? Let's reset priority.
   priority.value = 'Medium'
+  repeat.value = 'None'
   estimatedPomodoros.value = 1
 }
 </script>
@@ -57,6 +60,13 @@ const handleSubmit = () => {
           <option value="Medium">Mittlere Priorität</option>
           <option value="High">Hohe Priorität</option>
         </select>
+
+        <select v-model="repeat" aria-label="Wiederholung">
+            <option value="None">Keine Wiederholung</option>
+            <option value="Daily">Täglich</option>
+            <option value="Weekly">Wöchentlich</option>
+            <option value="Monthly">Monatlich</option>
+        </select>
         
         <div class="pomodoro-estimate">
             <span class="estimate-label">🍅 Schätzung:</span>
@@ -64,7 +74,7 @@ const handleSubmit = () => {
                 v-model.number="estimatedPomodoros" 
                 type="number" 
                 min="1" 
-                max="10" 
+                max="50" 
                 class="estimate-input"
             />
         </div>
