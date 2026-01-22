@@ -61,6 +61,47 @@ const addSubtask = () => {
   store.addSubtask(props.todo.id, newSubtaskText.value)
   newSubtaskText.value = ''
 }
+
+const fileInputRef = ref(null)
+
+const triggerFileInput = () => {
+  fileInputRef.value.click()
+}
+
+const handleFileUpload = (event) => {
+  const files = event.target.files
+  if (!files || files.length === 0) return
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const imageData = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        src: e.target.result,
+        name: file.name
+      }
+      store.addImage(props.todo.id, imageData)
+    }
+    reader.readAsDataURL(file)
+  })
+  
+  // Reset input
+  if (fileInputRef.value) fileInputRef.value.value = ''
+}
+
+const removeImage = (imageId) => {
+  store.removeImage(props.todo.id, imageId)
+}
+
+const selectedImage = ref(null)
+
+const openImage = (image) => {
+  selectedImage.value = image
+}
+
+const closeImage = () => {
+  selectedImage.value = null
+}
 </script>
 
 <template>
@@ -185,8 +226,53 @@ const addSubtask = () => {
           <button @click="addSubtask" class="add-subtask-btn">+</button>
         </div>
       </div>
+
+
+       <!-- Images Section -->
+       <div class="details-section">
+        <div class="section-header">
+          <label class="details-label">Bilder</label>
+          <button @click="triggerFileInput" class="add-image-btn" title="Bild hinzufügen">
+            📷+
+          </button>
+          <input 
+            ref="fileInputRef"
+            type="file" 
+            multiple 
+            accept="image/*" 
+            class="hidden-file-input"
+            @change="handleFileUpload"
+          />
+        </div>
+        
+        <div v-if="todo.images && todo.images.length > 0" class="image-grid">
+          <div v-for="image in todo.images" :key="image.id" class="image-item">
+            <img 
+              :src="image.src" 
+              :alt="image.name" 
+              class="todo-image" 
+              @click="openImage(image)"
+            />
+            <button @click.stop="removeImage(image.id)" class="delete-image-btn" title="Entfernen">×</button>
+          </div>
+        </div>
+        <div v-else class="empty-images">
+          <span class="empty-text">Keine Bilder vorhanden</span>
+        </div>
+      </div>
+
+
     </div>
   </li>
+
+  <Teleport to="body">
+    <div v-if="selectedImage" class="image-modal-backdrop" @click="closeImage">
+      <div class="image-modal-content" @click.stop>
+        <button class="modal-close-btn" @click="closeImage">×</button>
+        <img :src="selectedImage.src" :alt="selectedImage.name" class="modal-image" />
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -501,5 +587,157 @@ const addSubtask = () => {
     background-color: var(--color-accent);
     color: white;
     border-color: var(--color-accent);
+}
+
+
+/* Image Section Styles */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.add-image-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  color: var(--color-text-muted);
+}
+
+.add-image-btn:hover {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.image-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+
+
+.image-item:hover .todo-image {
+  transform: scale(1.05);
+}
+
+.delete-image-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+
+.image-item:hover .delete-image-btn {
+  opacity: 1;
+}
+
+.delete-image-btn:hover {
+  background: rgba(231, 76, 60, 0.9);
+}
+
+.empty-images {
+  padding: 8px;
+  text-align: center;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  border: 1px dashed var(--color-border);
+}
+
+.empty-text {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* Modal Styles */
+.image-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-image {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  animation: scaleIn 0.2s ease-out;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.modal-close-btn:hover {
+  opacity: 1;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 </style>

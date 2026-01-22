@@ -94,6 +94,7 @@ export const useTodoStore = defineStore('todo', () => {
             notes: '',
             subtasks: [],
             pomodoros: 0,
+            images: [],
             createdAt: new Date()
         })
     }
@@ -227,6 +228,23 @@ export const useTodoStore = defineStore('todo', () => {
         }
     }
 
+
+    // --- Image Actions ---
+    function addImage(todoId, image) {
+        const todo = todos.value.find(t => t.id === todoId)
+        if (todo) {
+            if (!todo.images) todo.images = []
+            todo.images.push(image)
+        }
+    }
+
+    function removeImage(todoId, imageId) {
+        const todo = todos.value.find(t => t.id === todoId)
+        if (todo && todo.images) {
+            todo.images = todo.images.filter(img => img.id !== imageId)
+        }
+    }
+
     return {
         todos,
         activeTodoId,
@@ -253,6 +271,9 @@ export const useTodoStore = defineStore('todo', () => {
         nextBreakMode,
         resetPomodoroCycle,
         addCategory,
-        deleteCategory
+
+        deleteCategory,
+        addImage,
+        removeImage
     }
 })
