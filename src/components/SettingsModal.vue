@@ -16,6 +16,11 @@ watch(() => props.isOpen, (newVal) => {
   }
 })
 
+// Watch for store changes (e.g. from file load) while modal is open or when it opens
+watch(() => store.timerSettings, (newSettings) => {
+    form.value = { ...newSettings }
+}, { deep: true })
+
 const save = () => {
   store.updateTimerSettings(form.value)
   emit('close')
@@ -73,6 +78,22 @@ const addNewCategory = () => {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
           </div>
+        </div>
+
+        <div class="setting-group">
+          <label>Datenspeicherung</label>
+          <div class="data-actions">
+             <button @click="store.selectSaveFile" class="btn-secondary">
+               <span v-if="store.fileHandle">Mit Datei verbunden ✅</span>
+               <span v-else>Speicherdatei wählen</span>
+             </button>
+             <button @click="store.loadFromFile" class="btn-secondary">
+               Daten importieren
+             </button>
+          </div>
+          <small v-if="store.fileHandle" class="status-text">
+            Automatische Speicherung in JSON-Datei aktiv.
+          </small>
         </div>
 
         <div class="modal-actions">
@@ -203,5 +224,32 @@ h3 {
 
 .btn-small:not(:disabled):hover {
   filter: brightness(1.1);
+}
+
+.data-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-secondary {
+  padding: 8px 12px;
+  background-color: var(--color-bg-secondary, #f5f5f5);
+  color: var(--color-text, #333);
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-border);
+}
+
+.status-text {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  margin-top: 4px;
 }
 </style>

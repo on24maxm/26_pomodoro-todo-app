@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 export const useTodoStore = defineStore('todo', () => {
     // --- State ---
@@ -26,6 +26,113 @@ export const useTodoStore = defineStore('todo', () => {
         shortBreak: 5,
         longBreak: 15
     })
+
+    // --- Persistence ---
+    const fileHandle = ref(null)
+
+    function saveToLocalStorage() {
+        const data = {
+            todos: todos.value,
+            categories: categories.value,
+            timerSettings: timerSettings.value,
+            dailyStats: dailyStats.value,
+            pomodorosSinceLongBreak: pomodorosSinceLongBreak.value
+        }
+        localStorage.setItem('pomodoro-todo-data', JSON.stringify(data))
+    }
+
+    function loadFromLocalStorage() {
+        const data = localStorage.getItem('pomodoro-todo-data')
+        if (data) {
+            try {
+                const parsed = JSON.parse(data)
+                if (parsed.todos) todos.value = parsed.todos
+                if (parsed.categories) categories.value = parsed.categories
+                if (parsed.timerSettings) timerSettings.value = parsed.timerSettings
+                if (parsed.dailyStats) dailyStats.value = parsed.dailyStats
+                if (parsed.pomodorosSinceLongBreak) pomodorosSinceLongBreak.value = parsed.pomodorosSinceLongBreak
+            } catch (e) {
+                console.error('Failed to parse local storage data', e)
+            }
+        }
+    }
+
+    // Initialize from LocalStorage immediately
+    loadFromLocalStorage()
+
+    // Watch for changes
+    watch([todos, categories, timerSettings, dailyStats, pomodorosSinceLongBreak], () => {
+        saveToLocalStorage()
+        if (fileHandle.value) {
+            saveToJSON()
+        }
+    }, { deep: true })
+
+    async function selectSaveFile() {
+        try {
+            const handle = await window.showSaveFilePicker({
+                types: [{
+                    description: 'JSON File',
+                    accept: { 'application/json': ['.json'] },
+                }],
+            });
+            fileHandle.value = handle;
+            await saveToJSON(); // Initial save to the file
+        } catch (err) {
+            console.error('File selection cancelled or failed', err);
+        }
+    }
+
+    async function loadFromFile() {
+        try {
+            const [handle] = await window.showOpenFilePicker({
+                types: [{
+                    description: 'JSON File',
+                    accept: { 'application/json': ['.json'] },
+                }],
+                multiple: false
+            });
+            fileHandle.value = handle;
+            const file = await handle.getFile();
+            const contents = await file.text();
+
+            try {
+                const parsed = JSON.parse(contents);
+                // Update state
+                if (parsed.todos) todos.value = parsed.todos
+                if (parsed.categories) categories.value = parsed.categories
+                if (parsed.timerSettings) timerSettings.value = parsed.timerSettings
+                if (parsed.dailyStats) dailyStats.value = parsed.dailyStats
+                if (parsed.pomodorosSinceLongBreak) pomodorosSinceLongBreak.value = parsed.pomodorosSinceLongBreak
+
+                // Save to local storage as well to sync
+                saveToLocalStorage()
+            } catch (parseErr) {
+                console.error('Invalid JSON file', parseErr);
+                alert('Invalid JSON file');
+            }
+        } catch (err) {
+            console.error('File load cancelled or failed', err);
+        }
+    }
+
+    async function saveToJSON() {
+        if (!fileHandle.value) return;
+        try {
+            const writable = await fileHandle.value.createWritable();
+            const data = {
+                todos: todos.value,
+                categories: categories.value,
+                timerSettings: timerSettings.value,
+                dailyStats: dailyStats.value,
+                pomodorosSinceLongBreak: pomodorosSinceLongBreak.value
+            };
+            await writable.write(JSON.stringify(data, null, 2));
+            await writable.close();
+        } catch (err) {
+            console.error('Failed to save to JSON file', err);
+        }
+    }
 
     // --- Getters ---
     const activeTodo = computed(() => {
@@ -274,6 +381,11 @@ export const useTodoStore = defineStore('todo', () => {
 
         deleteCategory,
         addImage,
-        removeImage
+        removeImage,
+
+        // Persistence
+        selectSaveFile,
+        loadFromFile,
+        fileHandle
     }
 })
