@@ -17,6 +17,9 @@ export const useTodoStore = defineStore('todo', () => {
         count: 0
     })
 
+    // Pomodoro Cycle Tracking
+    const pomodorosSinceLongBreak = ref(0)
+
     // Timer Settings (in minutes)
     const timerSettings = ref({
         work: 25,
@@ -69,6 +72,12 @@ export const useTodoStore = defineStore('todo', () => {
 
             return sortOrder.value === 'asc' ? -comparison : comparison
         })
+    })
+
+
+
+    const nextBreakMode = computed(() => {
+        return pomodorosSinceLongBreak.value >= 4 ? 'longBreak' : 'shortBreak'
     })
 
     // --- Actions ---
@@ -155,6 +164,7 @@ export const useTodoStore = defineStore('todo', () => {
     function completePomodoro() {
         checkDailyReset()
         dailyStats.value.count++
+        pomodorosSinceLongBreak.value++
 
         // Increment pomodoro count for active todo
         if (activeTodoId.value) {
@@ -163,6 +173,21 @@ export const useTodoStore = defineStore('todo', () => {
                 todo.pomodoros = (todo.pomodoros || 0) + 1
             }
         }
+    }
+
+    function resetPomodoroCycle() {
+        pomodorosSinceLongBreak.value = 0
+    }
+
+    function addCategory(name) {
+        if (!name) return
+        if (!categories.value.includes(name)) {
+            categories.value.push(name)
+        }
+    }
+
+    function deleteCategory(name) {
+        categories.value = categories.value.filter(c => c !== name)
     }
 
     // --- Subtask & Note Actions ---
@@ -223,6 +248,11 @@ export const useTodoStore = defineStore('todo', () => {
         updateTodoNotes,
         addSubtask,
         toggleSubtask,
-        deleteSubtask
+        deleteSubtask,
+        pomodorosSinceLongBreak,
+        nextBreakMode,
+        resetPomodoroCycle,
+        addCategory,
+        deleteCategory
     }
 })

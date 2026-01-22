@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onUnmounted, watch } from 'vue'
+import { ref, computed, onUnmounted, watch, nextTick } from 'vue'
 import { useTodoStore } from '../stores/todoStore'
 import { useTimerSounds } from '../composables/useTimerSounds'
 
@@ -53,9 +53,29 @@ const startTimer = () => {
       timeLeft.value--
     } else {
       pauseTimer()
-      playCompleteSound()
+      try {
+        playCompleteSound()
+      } catch (e) {
+        console.error('Error playing complete sound:', e)
+      }
+      
       if (mode.value === 'work') {
         store.completePomodoro()
+        const nextMode = store.nextBreakMode
+        
+        changeMode(nextMode)
+      } else {
+        // Break is over
+        // Capture previous mode before switching
+        const previousMode = mode.value
+        
+        // "sodass der nutzer es nurnoch starten soll" -> Automatic switch to work, but paused.
+        changeMode('work') 
+        
+        // Check if we just finished a long break to reset the cycle
+        if (previousMode === 'longBreak') {
+             store.resetPomodoroCycle()
+        }
       }
     }
   }, 1000)
@@ -71,8 +91,9 @@ const resetTimer = () => {
   timeLeft.value = originalDuration.value
 }
 
-const changeMode = (newMode) => {
+const changeMode = async (newMode) => {
   mode.value = newMode
+  await nextTick()
   resetTimer()
 }
 
