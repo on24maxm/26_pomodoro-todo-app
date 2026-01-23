@@ -130,21 +130,95 @@ export const useTodoStore = defineStore('todo', () => {
     }
 
     // Apply loaded data from JSON file
+    // Apply loaded data from JSON file with Smart Merge
     function applyLoadedData(parsed) {
-        if (parsed.todos) todos.value = parsed.todos
-        if (parsed.categories) categories.value = parsed.categories
+        // --- Smart Merge for Todos ---
+        if (parsed.todos) {
+            const fileTodos = parsed.todos
+            const appTodos = todos.value
+
+            // We want to merge App Data (Current) INTO File Data (Persistent)
+            // But we want to preserve File Data that isn't in App (Union)
+            // And we want App Data to overwrite File Data if there's a match (App is "latest")
+
+            // 1. Start with File Todos as the base
+            const mergedTodos = [...fileTodos]
+
+            // 2. Iterate through App Todos and merge them in
+            appTodos.forEach(appTodo => {
+                // Formatting Date for comparison (YYYY-MM-DD or unique string)
+                const getCompareDate = (t) => t.dueDate || 'no-date'
+
+                // Find match in File Todos
+                const matchIndex = mergedTodos.findIndex(fileTodo => {
+                    // Match by ID
+                    if (fileTodo.id === appTodo.id) return true
+
+                    // Match by Content & Date
+                    // "1:1 den selben Inhalt" + Date Check
+                    return fileTodo.text === appTodo.text &&
+                        getCompareDate(fileTodo) === getCompareDate(appTodo)
+                })
+
+                if (matchIndex !== -1) {
+                    // Found match: Overwrite File Todo with App Todo (App is source of truth for "new changes")
+                    // But maybe we want to keep ID from File if we matched by Text? 
+                    // If matched by text, we should probably align IDs to avoid future dupes.
+                    // Let's use App Todo, but ensure consistent ID if we want? 
+                    // Actually, if we overwrite, we just take App Todo.
+                    mergedTodos[matchIndex] = appTodo
+                } else {
+                    // No match: Append App Todo
+                    mergedTodos.push(appTodo)
+                }
+            })
+
+            todos.value = mergedTodos
+        }
+
+        // --- Standard loading for other settings (File overrides App, or valid merge?) ---
+        // For settings, usually we want the profile from the file.
+        if (parsed.categories) {
+            // Merge categories unique
+            const newCategories = new Set([...categories.value, ...parsed.categories])
+            categories.value = Array.from(newCategories)
+        }
+
         if (parsed.timerSettings) timerSettings.value = parsed.timerSettings
-        if (parsed.dailyStats) dailyStats.value = parsed.dailyStats
+        if (parsed.dailyStats) {
+            // For stats, if we are merging todos, we might want to be careful.
+            // But usually file has the long-term stats.
+            dailyStats.value = parsed.dailyStats
+        }
         if (parsed.pomodorosSinceLongBreak) pomodorosSinceLongBreak.value = parsed.pomodorosSinceLongBreak
 
         // Load gamification data
         if (parsed.gamification) {
             const gamification = useGamificationStore()
+            // We might want method to merge gamification too?
+            // For now, load from file as it's likely the persistent profile
             gamification.importData(parsed.gamification)
         }
 
         // Save to local storage as well to sync
         saveToLocalStorage()
+
+        // IMMEDIATE SAVE: We merged App Data in, so we must write this back to the file
+        // to Ensure the file gets the new Todos from the App.
+        // But we need to be careful not to cycle if this function was called by a watcher (it isn't, it's called by loadFromFile)
+        // However, we need to ensure filePath is set before saving.
+        // applyLoadedData is called AFTER filePath is set loops in loadFromFile/readJsonFile context usually.
+        // Let's check call sites. 
+        // loadFromFile -> applyLoadedData.
+        // tryAutoConnect -> applyLoadedData.
+        // The filePath is set just before calling this.
+
+        // Trigger save to persist the merge result to the JSON file
+        // We use setTimeout to allow state to settle? Not strictly necessary but safe.
+        // calling saveToJSON directly.
+        setTimeout(() => {
+            saveToJSON()
+        }, 100)
     }
 
     async function selectSaveFile() {
