@@ -4,10 +4,16 @@ import TodoInput from './components/TodoInput.vue'
 import TodoList from './components/TodoList.vue'
 import TimerDisplay from './components/TimerDisplay.vue'
 import SettingsModal from './components/SettingsModal.vue'
+import GamificationPanel from './components/GamificationPanel.vue'
+import ItemShop from './components/ItemShop.vue'
+import AchievementsModal from './components/AchievementsModal.vue'
+import LevelUpNotification from './components/LevelUpNotification.vue'
 import { useTodoStore } from './stores/todoStore'
 
 const store = useTodoStore()
 const showSettings = ref(false)
+const showShop = ref(false)
+const showAchievements = ref(false)
 
 // Notification Logic for Due Todos
 setInterval(() => {
@@ -50,9 +56,16 @@ if (Notification.permission === 'default') {
             </span>
         </span>
       </div>
-      <button @click="showSettings = true" class="settings-btn" title="Settings">
-        Einstellungen
-      </button>
+      
+      <div class="header-right">
+        <GamificationPanel 
+          @openShop="showShop = true" 
+          @openAchievements="showAchievements = true" 
+        />
+        <button @click="showSettings = true" class="settings-btn" title="Settings">
+          Einstellungen
+        </button>
+      </div>
     </header>
 
     <main class="main-layout">
@@ -69,12 +82,15 @@ if (Notification.permission === 'default') {
     </main>
 
     <SettingsModal :isOpen="showSettings" @close="showSettings = false" />
+    <ItemShop :isOpen="showShop" @close="showShop = false" />
+    <AchievementsModal :isOpen="showAchievements" @close="showAchievements = false" />
+    <LevelUpNotification />
   </div>
 </template>
 
 <style scoped>
 .app-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: var(--spacing-lg);
 }
@@ -84,6 +100,8 @@ if (Notification.permission === 'default') {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-xl);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
 }
 
 .logo {
@@ -97,6 +115,12 @@ if (Notification.permission === 'default') {
 .header-left {
   display: flex;
   align-items: baseline;
+  gap: var(--spacing-md);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
   gap: var(--spacing-md);
 }
 
@@ -145,6 +169,20 @@ if (Notification.permission === 'default') {
   .timer-section {
     order: -1; /* Timer on top for mobile */
     margin-bottom: var(--spacing-lg);
+  }
+  
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .header-left {
+    justify-content: center;
+  }
+  
+  .header-right {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

@@ -150,3 +150,93 @@ select:focus {
 .text-muted {
   color: var(--color-text-muted);
 }
+
+/* ============================================
+   THEME: Dark Mode
+   ============================================ */
+:root.theme-dark {
+  --color-bg: #121212;
+  --color-surface: #1e1e1e;
+  --color-text: #e0e0e0;
+  --color-text-muted: #9e9e9e;
+  --color-border: #333333;
+  --color-accent: #bb86fc;
+  --color-accent-hover: #9a67ea;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   THEME: Nature (Green-Brown)
+   ============================================ */
+:root.theme-nature {
+  --color-bg: #f0ebe3;
+  --color-surface: #fdfbf7;
+  --color-text: #2d3a2d;
+  --color-text-muted: #5c6b5c;
+  --color-border: #c9d1c0;
+  --color-accent: #4a7c59;
+  --color-accent-hover: #3d6649;
+  --color-priority-low: #6b8e23;
+}
+
+/* ============================================
+   THEME: Ocean (Blue)
+   ============================================ */
+:root.theme-ocean {
+  --color-bg: #e8f4f8;
+  --color-surface: #ffffff;
+  --color-text: #1a3a4a;
+  --color-text-muted: #5a7a8a;
+  --color-border: #b8d4e3;
+  --color-accent: #0077b6;
+  --color-accent-hover: #005f92;
+  --color-priority-high: #d62828;
+  --color-priority-medium: #f77f00;
+  --color-priority-low: #2a9d8f;
+}
+
+/* ============================================
+   THEME: Sunset (Orange-Pink)
+   ============================================ */
+:root.theme-sunset {
+  --color-bg: #fff5f5;
+  --color-surface: #ffffff;
+  --color-text: #4a2c2a;
+  --color-text-muted: #8b6f6d;
+  --color-border: #f0d0cf;
+  --color-accent: #e75a7c;
+  --color-accent-hover: #d64469;
+  --color-priority-high: #dc2626;
+  --color-priority-medium: #fb923c;
+  --color-priority-low: #22c55e;
+}
+
+/* ============================================
+   COSMETIC: Golden Frame
+   ============================================ */
+:root.cosmetic-golden-frame .card {
+  border: 2px solid transparent;
+  background: 
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    linear-gradient(135deg, #ffd700, #ffaa00, #ffd700) border-box;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+}
+
+:root.cosmetic-golden-frame .todo-item.card {
+  position: relative;
+}
+
+:root.cosmetic-golden-frame .todo-item.card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, #ffd700, #ffaa00, #ffd700);
+  border-radius: calc(var(--radius-md) + 2px);
+  z-index: -1;
+  opacity: 0.8;
+}

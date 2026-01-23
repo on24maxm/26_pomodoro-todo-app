@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useTodoStore } from '../stores/todoStore'
+import { useSounds } from '../composables/useSounds'
 
 const props = defineProps({
   todo: {
@@ -10,11 +11,22 @@ const props = defineProps({
 })
 
 const store = useTodoStore()
+const sounds = useSounds()
 const isExpanded = ref(false)
 const newSubtaskText = ref('')
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value
+}
+
+function handleToggleTodo() {
+  const wasCompleted = props.todo.completed
+  store.toggleTodo(props.todo.id)
+  
+  // Play sound only when completing (not uncompleting)
+  if (!wasCompleted) {
+    sounds.playTodoComplete()
+  }
 }
 
 const priorityColor = (priority) => {
@@ -173,7 +185,7 @@ const saveEdit = () => {
         <div v-else class="view-mode-container">
              <div class="todo-left">
                 <button 
-                @click="store.toggleTodo(todo.id)" 
+                @click="handleToggleTodo" 
                 class="check-btn"
                 :aria-label="todo.completed ? 'Mark update incomplete' : 'Mark as complete'"
                 >

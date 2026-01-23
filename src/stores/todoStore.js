@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
+import { useGamificationStore } from './gamificationStore'
 
 export const useTodoStore = defineStore('todo', () => {
     // --- State ---
@@ -221,6 +222,14 @@ export const useTodoStore = defineStore('todo', () => {
             const wasCompleted = todo.completed
             todo.completed = !todo.completed
 
+            // Award XP for completing a todo
+            if (!wasCompleted && todo.completed) {
+                const gamification = useGamificationStore()
+                // XP based on priority: High=30, Medium=20, Low=10
+                const xpReward = todo.priority === 'High' ? 30 : todo.priority === 'Medium' ? 20 : 10
+                gamification.addXP(xpReward, 'todo')
+            }
+
             // Handle Repeating Todos (only when marking as completed)
             if (!wasCompleted && todo.completed && todo.repeat && todo.repeat !== 'None') {
                 const nextDate = new Date()
@@ -329,6 +338,11 @@ export const useTodoStore = defineStore('todo', () => {
                 todo.pomodoros = (todo.pomodoros || 0) + 1
             }
         }
+
+        // Award XP for completing a pomodoro
+        const gamification = useGamificationStore()
+        gamification.addXP(25, 'pomodoro')
+        gamification.addFocusMinutes(timerSettings.value.work)
     }
 
     function resetPomodoroCycle() {
