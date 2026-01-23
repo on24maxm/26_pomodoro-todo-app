@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import TodoInput from './components/TodoInput.vue'
 import TodoList from './components/TodoList.vue'
 import TimerDisplay from './components/TimerDisplay.vue'
@@ -8,12 +8,37 @@ import GamificationPanel from './components/GamificationPanel.vue'
 import ItemShop from './components/ItemShop.vue'
 import AchievementsModal from './components/AchievementsModal.vue'
 import LevelUpNotification from './components/LevelUpNotification.vue'
+import FileConnectionDialog from './components/FileConnectionDialog.vue'
 import { useTodoStore } from './stores/todoStore'
 
 const store = useTodoStore()
 const showSettings = ref(false)
 const showShop = ref(false)
 const showAchievements = ref(false)
+const showFileConnection = ref(false)
+const isInitialized = ref(false)
+
+// Auto-connect to saved file on startup
+onMounted(async () => {
+    // Only show connection dialog in Electron
+    if (store.isElectronApp()) {
+        const connected = await store.tryAutoConnect()
+        
+        // If no file connected and no saved path, show dialog
+        if (!connected && !store.getSavedFilePath()) {
+            showFileConnection.value = true
+        }
+    }
+    isInitialized.value = true
+})
+
+const handleFileConnected = () => {
+    showFileConnection.value = false
+}
+
+const handleSkipConnection = () => {
+    showFileConnection.value = false
+}
 
 // Notification Logic for Due Todos
 setInterval(() => {
@@ -85,6 +110,11 @@ if (Notification.permission === 'default') {
     <ItemShop :isOpen="showShop" @close="showShop = false" />
     <AchievementsModal :isOpen="showAchievements" @close="showAchievements = false" />
     <LevelUpNotification />
+    <FileConnectionDialog 
+      v-if="showFileConnection" 
+      @connected="handleFileConnected" 
+      @skip="handleSkipConnection" 
+    />
   </div>
 </template>
 

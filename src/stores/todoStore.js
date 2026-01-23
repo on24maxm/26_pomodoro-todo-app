@@ -30,7 +30,14 @@ export const useTodoStore = defineStore('todo', () => {
     })
 
     // --- Persistence ---
-    const fileHandle = ref(null)
+    const filePath = ref(null)
+    const fileHandle = ref(null) // For browser File System Access API
+    const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron
+
+    // Check if running in Electron
+    function isElectronApp() {
+        return typeof window !== 'undefined' && window.electronAPI?.isElectron
+    }
 
     function saveToLocalStorage() {
         const data = {
@@ -59,80 +66,187 @@ export const useTodoStore = defineStore('todo', () => {
         }
     }
 
+    // Save file path to localStorage for auto-reconnect
+    function saveFilePath(path) {
+        if (path) {
+            localStorage.setItem('pomodoro-json-file-path', path)
+            filePath.value = path
+        }
+    }
+
+    // Get saved file path
+    function getSavedFilePath() {
+        return localStorage.getItem('pomodoro-json-file-path')
+    }
+
+    // Clear saved file path
+    function clearSavedFilePath() {
+        localStorage.removeItem('pomodoro-json-file-path')
+        filePath.value = null
+        fileHandle.value = null
+    }
+
+    // Check if file is connected
+    function isFileConnected() {
+        return filePath.value !== null || fileHandle.value !== null
+    }
+
     // Initialize from LocalStorage immediately
     loadFromLocalStorage()
 
     // Watch for changes
     watch([todos, categories, timerSettings, dailyStats, pomodorosSinceLongBreak], () => {
         saveToLocalStorage()
-        if (fileHandle.value) {
+        if (filePath.value || fileHandle.value) {
             saveToJSON()
         }
     }, { deep: true })
 
-    async function selectSaveFile() {
+    // Auto-connect to saved file on startup (Electron only)
+    async function tryAutoConnect() {
+        if (!isElectronApp()) return false
+
+        const savedPath = getSavedFilePath()
+        if (!savedPath) return false
+
         try {
-            const handle = await window.showSaveFilePicker({
-                types: [{
-                    description: 'JSON File',
-                    accept: { 'application/json': ['.json'] },
-                }],
-            });
-            fileHandle.value = handle;
-            await saveToJSON(); // Initial save to the file
+            const exists = await window.electronAPI.fileExists(savedPath)
+            if (!exists) {
+                clearSavedFilePath()
+                return false
+            }
+
+            const result = await window.electronAPI.readJsonFile(savedPath)
+            if (result.success) {
+                filePath.value = savedPath
+                applyLoadedData(result.data)
+                return true
+            }
         } catch (err) {
-            console.error('File selection cancelled or failed', err);
+            console.error('Auto-connect failed:', err)
+            clearSavedFilePath()
+        }
+        return false
+    }
+
+    // Apply loaded data from JSON file
+    function applyLoadedData(parsed) {
+        if (parsed.todos) todos.value = parsed.todos
+        if (parsed.categories) categories.value = parsed.categories
+        if (parsed.timerSettings) timerSettings.value = parsed.timerSettings
+        if (parsed.dailyStats) dailyStats.value = parsed.dailyStats
+        if (parsed.pomodorosSinceLongBreak) pomodorosSinceLongBreak.value = parsed.pomodorosSinceLongBreak
+
+        // Load gamification data
+        if (parsed.gamification) {
+            const gamification = useGamificationStore()
+            gamification.importData(parsed.gamification)
+        }
+
+        // Save to local storage as well to sync
+        saveToLocalStorage()
+    }
+
+    async function selectSaveFile() {
+        if (isElectronApp()) {
+            // Electron: Use native dialog
+            try {
+                const result = await window.electronAPI.selectSaveFile()
+                if (result.success && result.path) {
+                    saveFilePath(result.path)
+                    await saveToJSON()
+                }
+            } catch (err) {
+                console.error('File selection failed:', err)
+            }
+        } else {
+            // Browser: Use File System Access API
+            try {
+                const handle = await window.showSaveFilePicker({
+                    types: [{
+                        description: 'JSON File',
+                        accept: { 'application/json': ['.json'] },
+                    }],
+                });
+                fileHandle.value = handle;
+                await saveToJSON();
+            } catch (err) {
+                console.error('File selection cancelled or failed', err);
+            }
         }
     }
 
     async function loadFromFile() {
-        try {
-            const [handle] = await window.showOpenFilePicker({
-                types: [{
-                    description: 'JSON File',
-                    accept: { 'application/json': ['.json'] },
-                }],
-                multiple: false
-            });
-            fileHandle.value = handle;
-            const file = await handle.getFile();
-            const contents = await file.text();
-
+        if (isElectronApp()) {
+            // Electron: Use native dialog
             try {
-                const parsed = JSON.parse(contents);
-                // Update state
-                if (parsed.todos) todos.value = parsed.todos
-                if (parsed.categories) categories.value = parsed.categories
-                if (parsed.timerSettings) timerSettings.value = parsed.timerSettings
-                if (parsed.dailyStats) dailyStats.value = parsed.dailyStats
-                if (parsed.pomodorosSinceLongBreak) pomodorosSinceLongBreak.value = parsed.pomodorosSinceLongBreak
-
-                // Save to local storage as well to sync
-                saveToLocalStorage()
-            } catch (parseErr) {
-                console.error('Invalid JSON file', parseErr);
-                alert('Invalid JSON file');
+                const result = await window.electronAPI.selectJsonFile()
+                if (result.success && result.path) {
+                    const readResult = await window.electronAPI.readJsonFile(result.path)
+                    if (readResult.success) {
+                        saveFilePath(result.path)
+                        applyLoadedData(readResult.data)
+                    } else {
+                        alert('Fehler beim Lesen der Datei: ' + readResult.error)
+                    }
+                }
+            } catch (err) {
+                console.error('File load failed:', err)
             }
-        } catch (err) {
-            console.error('File load cancelled or failed', err);
+        } else {
+            // Browser: Use File System Access API
+            try {
+                const [handle] = await window.showOpenFilePicker({
+                    types: [{
+                        description: 'JSON File',
+                        accept: { 'application/json': ['.json'] },
+                    }],
+                    multiple: false
+                });
+                fileHandle.value = handle;
+                const file = await handle.getFile();
+                const contents = await file.text();
+
+                try {
+                    const parsed = JSON.parse(contents);
+                    applyLoadedData(parsed)
+                } catch (parseErr) {
+                    console.error('Invalid JSON file', parseErr);
+                    alert('Invalid JSON file');
+                }
+            } catch (err) {
+                console.error('File load cancelled or failed', err);
+            }
         }
     }
 
     async function saveToJSON() {
-        if (!fileHandle.value) return;
-        try {
-            const writable = await fileHandle.value.createWritable();
-            const data = {
-                todos: todos.value,
-                categories: categories.value,
-                timerSettings: timerSettings.value,
-                dailyStats: dailyStats.value,
-                pomodorosSinceLongBreak: pomodorosSinceLongBreak.value
-            };
-            await writable.write(JSON.stringify(data, null, 2));
-            await writable.close();
-        } catch (err) {
-            console.error('Failed to save to JSON file', err);
+        const gamification = useGamificationStore()
+        const data = {
+            todos: todos.value,
+            categories: categories.value,
+            timerSettings: timerSettings.value,
+            dailyStats: dailyStats.value,
+            pomodorosSinceLongBreak: pomodorosSinceLongBreak.value,
+            gamification: gamification.exportData()
+        };
+
+        if (isElectronApp() && filePath.value) {
+            // Electron: Write directly to file
+            try {
+                await window.electronAPI.writeJsonFile(filePath.value, data)
+            } catch (err) {
+                console.error('Failed to save to JSON file:', err)
+            }
+        } else if (fileHandle.value) {
+            // Browser: Use File System Access API
+            try {
+                const writable = await fileHandle.value.createWritable();
+                await writable.write(JSON.stringify(data, null, 2));
+                await writable.close();
+            } catch (err) {
+                console.error('Failed to save to JSON file', err);
+            }
         }
     }
 
@@ -222,12 +336,14 @@ export const useTodoStore = defineStore('todo', () => {
             const wasCompleted = todo.completed
             todo.completed = !todo.completed
 
-            // Award XP for completing a todo
-            if (!wasCompleted && todo.completed) {
+            // Award XP for completing a todo (only once per todo)
+            if (!wasCompleted && todo.completed && !todo.xpAwarded) {
                 const gamification = useGamificationStore()
                 // XP based on priority: High=30, Medium=20, Low=10
                 const xpReward = todo.priority === 'High' ? 30 : todo.priority === 'Medium' ? 20 : 10
                 gamification.addXP(xpReward, 'todo')
+                // Mark that XP has been awarded for this todo
+                todo.xpAwarded = true
             }
 
             // Handle Repeating Todos (only when marking as completed)
@@ -449,6 +565,12 @@ export const useTodoStore = defineStore('todo', () => {
         // Persistence
         selectSaveFile,
         loadFromFile,
-        fileHandle
+        fileHandle,
+        filePath,
+        isFileConnected,
+        tryAutoConnect,
+        getSavedFilePath,
+        clearSavedFilePath,
+        isElectronApp
     }
 })

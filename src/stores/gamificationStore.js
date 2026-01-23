@@ -371,7 +371,9 @@ export const useGamificationStore = defineStore('gamification', () => {
             totalCoinsEarned: totalCoinsEarned.value,
             purchasedItems: purchasedItems.value,
             unlockedAchievements: unlockedAchievements.value,
-            stats: stats.value
+            stats: stats.value,
+            activeTheme: activeTheme.value,
+            activeCosmetics: activeCosmetics.value
         }
     }
 
@@ -383,6 +385,21 @@ export const useGamificationStore = defineStore('gamification', () => {
         if (data.purchasedItems) purchasedItems.value = data.purchasedItems
         if (data.unlockedAchievements) unlockedAchievements.value = data.unlockedAchievements
         if (data.stats) stats.value = { ...stats.value, ...data.stats }
+
+        // Restore active theme and cosmetics
+        if (data.activeTheme) {
+            activeTheme.value = data.activeTheme
+            applyTheme(data.activeTheme)
+        }
+        if (data.activeCosmetics) {
+            activeCosmetics.value = data.activeCosmetics
+            // Apply cosmetic effects
+            data.activeCosmetics.forEach(cosmeticId => {
+                if (cosmeticId === 'golden_frame') {
+                    document.documentElement.classList.add('cosmetic-golden-frame')
+                }
+            })
+        }
     }
 
     return {

@@ -124,6 +124,8 @@ const addNewCategory = () => {
   width: 90%;
   max-width: 400px;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background-color: var(--color-surface);
+  color: var(--color-text);
 }
 
 @keyframes slideUp {
@@ -134,6 +136,7 @@ const addNewCategory = () => {
 h3 {
   margin-bottom: var(--spacing-md);
   text-align: center;
+  color: var(--color-text);
 }
 
 .setting-group {
@@ -146,6 +149,21 @@ h3 {
 .setting-group label {
   font-size: 0.875rem;
   color: var(--color-text-muted);
+}
+
+.setting-group input[type="number"],
+.setting-group input[type="text"] {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.setting-group input:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
 
 .modal-actions {
@@ -170,9 +188,15 @@ h3 {
   justify-content: space-between;
   align-items: center;
   padding: 6px 10px;
-  background: var(--color-bg-secondary, #f5f5f5);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.category-item span {
+  color: var(--color-text);
 }
 
 .btn-icon {
@@ -203,11 +227,17 @@ h3 {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 0.9rem;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.add-category input::placeholder {
+  color: var(--color-text-muted);
 }
 
 .btn-small {
   padding: 6px 10px;
-  background-color: var(--color-primary);
+  background-color: var(--color-accent);
   color: white;
   border: none;
   border-radius: var(--radius-md);
@@ -234,9 +264,9 @@ h3 {
 
 .btn-secondary {
   padding: 8px 12px;
-  background-color: var(--color-bg-secondary, #f5f5f5);
-  color: var(--color-text, #333);
-  border: 1px solid var(--color-border, #ccc);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.9rem;
@@ -249,7 +279,34 @@ h3 {
 
 .status-text {
   font-size: 0.75rem;
-  color: var(--color-primary);
+  color: var(--color-accent);
   margin-top: 4px;
 }
+
+.btn-text {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 8px 12px;
+}
+
+.btn-text:hover {
+  color: var(--color-text);
+}
+
+.btn-primary {
+  background-color: var(--color-accent);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
 </style>
+
